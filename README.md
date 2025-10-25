@@ -34,7 +34,8 @@ It auto-detects defect directories within the specified source directory. Allows
 ## Features
 
 - **Create charged defect states** from a neutral reference (`--mode relax --stage initial -Q`).
-- **Continue** neutral and charged jobs (`--mode relax --stage final` or `--mode static`).
+- **Continue** neutral and charged jobs (`--mode relax --stage final`).
+- **Static** neutral and charged jobs (`--mode static`)
 - **Spin parity control**: with `--spin`, if `ISPIN=2` and computed `NELECT` is **even**, the script **deletes** the `ISPIN` line; if **odd**, it is kept.
 - **Safety system** with three levels:
   - `--safety 0` → ignore all checks; submit all.
@@ -45,7 +46,6 @@ It auto-detects defect directories within the specified source directory. Allows
 - **CHGCAR/WAVECAR safety**:
   - If `ICHARG=1` → `CHGCAR` must exist and be **non‑empty**; else rewrite same line to `ICHARG=2`.
   - If `ISTART ∈ {1,2,3}` → `WAVECAR` must exist.
-- **Same‑line INCAR edits**: when modifying `NELECT`, `ICHARG`, or deleting `ISPIN`, position is preserved.
 - **Global overrides**: local `./INCAR`, `./KPOINTS`, `./POTCAR`, `./job.vasp6` override per‑defect files.
 - **Verbose logs** to console (with `-v`) and always to `helper.log`.
 
@@ -55,7 +55,7 @@ It auto-detects defect directories within the specified source directory. Allows
 
 - Linux/Unix environment with Bash 4+, `awk`, `sed`, `find`.
 - VASP input files: `INCAR`, `KPOINTS`, `POTCAR`, `POSCAR/CONTCAR`, `job.vasp6`.
-- Queue submission via `qsub` in `PATH` (PBS/SGE). For SLURM users, see [Testing Locally](#testing-locally-no-real-submission) to mock `qsub`.
+- Queue submission via `qsub` in `PATH` (PBS/SGE).
 
 ---
 
@@ -63,17 +63,10 @@ It auto-detects defect directories within the specified source directory. Allows
 
 ```bash
 # Clone and make the helper executable
-git clone <your-repo-url>
-cd <repo>
+git clone https://github.com/zacherywillard/VASP_helper.sh
+cd VASP_helper.sh
 chmod +x VASP_helper.sh
 ```
-
-Optional: put it on your PATH.
-
-```bash
-ln -s "$PWD/VASP_helper.sh" ~/bin/VASP_helper.sh
-```
-
 ---
 
 ## Directory Convention
@@ -87,9 +80,9 @@ Cd_Se_0    Se_Cd_-1    Va_Cd_2    Si_i_0
 ```
 
 - **Neutral** ends with `_0`.
-- **Charged** ends with `_±n`.
+- **Charged** ends with `_Q`.
 
-The script discovers these automatically under `--source_root` (and `--neutral_root` when creating charges).
+The script discovers these automatically in `--source_root` (and `--neutral_root` when creating charges).
 
 ---
 
@@ -156,8 +149,8 @@ The script discovers these automatically under `--source_root` (and `--neutral_r
 
 ### Continue relax (final) or run static
 
-- Discovers subdirs in `--source_root` matching `_0` or `_±n`.
-- If charged (`_±n`), derives `NELECT` from source `OUTCAR` or from neutral reference minus charge.
+- Discovers subdirs in `--source_root` matching `_0` or `_Q`.
+- If charged (`_Q`), derives `NELECT` from source `OUTCAR` or from neutral reference minus charge.
 - Copies `CHGCAR`/`WAVECAR` only when **safe/required** (see Safety Checks), unless `--safety 0`.
 
 ### Selectors: `-Q`, `-N`, and `--charges`
@@ -235,27 +228,6 @@ For each prepared/continued job, the script copies into the new directory:
 
 ---
 
-## Testing Locally (no real submission)
-
-Mock `qsub` so submissions don’t touch your queue:
-
-```bash
-mkdir -p bin
-cat > bin/qsub << 'EOF'
-#!/usr/bin/env bash
-echo "[MOCK qsub] Would submit: $PWD/$*"
-EOF
-chmod +x bin/qsub
-export PATH="$PWD/bin:$PATH"
-
-# Now run the helper in this shell
-./VASP_helper.sh --mode static --source_root ./src -v
-```
-
-You’ll see `[MOCK qsub]` lines instead of real submissions.
-
----
-
 ## Troubleshooting
 
 - **“No matching directories under …”**
@@ -279,15 +251,10 @@ You’ll see `[MOCK qsub]` lines instead of real submissions.
 
   - `--spin` must be provided, and `INCAR` must contain `ISPIN=2` to trigger parity logic.
 
-- **Global overrides not used**
-
-  - Verify `./INCAR` etc. exist in the **working directory** where you invoke the helper.
-
 ---
 
 ## Known Limitations / Edge Cases
 
-- `NELECT(neutral)` is derived from `POTCAR` (`ZVAL`) and `POSCAR` (line 7 counts). Mixed or missing `ZVAL` blocks will prevent computation.
 - The POSCAR signature check compares **line 6 (species)** and **line 7 (counts)** only; if your workflow mutates species order or count inconsistently, density file safety checks may skip copies.
 - Only one level of subdirectories is scanned.
 - Submission uses `qsub`. For other schedulers, either provide a wrapper named `qsub` in your `PATH` or adapt the script.
@@ -297,9 +264,6 @@ You’ll see `[MOCK qsub]` lines instead of real submissions.
 ## Contributing
 
 PRs welcome! Please:
-
-- Keep the script readable and POSIX‑aware.
-- Favor focused comments that explain **why**.
 - Include a short test recipe or `helper.log` excerpt demonstrating behavior.
 - Update this README when CLI/behavior changes.
 
