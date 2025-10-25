@@ -145,18 +145,18 @@ The script discovers these automatically in `--source_root` (and `--neutral_root
 - Computes `NELECT(charged) = NELECT(neutral) − charge` using POSCAR (counts) + POTCAR (`ZVAL`).
 - Applies `--spin` parity logic to `ISPIN`.
 - Handles `ICHARG=1` (requires non‑empty `CHGCAR`; else same‑line change to `ICHARG=2`).
-- Defers **all submissions** until **after** safety checks for **all** jobs.
+- Defers all submissions until **after** safety checks for all jobs.
 
 ### Continue relax (final) or run static
 
 - Discovers subdirs in `--source_root` matching `_0` or `_Q`.
 - If charged (`_Q`), derives `NELECT` from source `OUTCAR` or from neutral reference minus charge.
-- Copies `CHGCAR`/`WAVECAR` only when **safe/required** (see Safety Checks), unless `--safety 0`.
+- Copies `CHGCAR`/`WAVECAR` only when safe/required (see Safety Checks), unless `--safety 0`.
 
 ### Selectors: `-Q`, `-N`, and `--charges`
 
 - `-Q` selects **charged** subdirs only; `-N` selects **neutral** only.
-- If neither is given, **all** matching subdirs are used.
+- If neither is given, all matching subdirs are used.
 - `--charges` controls which charge states are created during **relax initial**.
 
 ---
@@ -169,11 +169,9 @@ The script discovers these automatically in `--source_root` (and `--neutral_root
    - Skip if `KPAR` is not set or `KPAR=1`.
    - Otherwise, compute total k‑points from `KPOINTS` and require `KPAR ≤ #kpoints`.
 2. ``CHGCAR``
-   - Must exist and be **non‑empty**; otherwise the job is **unsafe** and `ICHARG` is rewritten **on the same line to **`` during preparation.
-3. ``WAVECAR``
-   - Must exist; otherwise the job is **unsafe**.
+   - Must exist and be **non‑empty**; otherwise the job is **unsafe** and `ICHARG` is rewritten during preparation.
 
-**Submission policy (**``**):**
+**Submission policy:**
 
 - `0` — **ignore** checks; **submit all**.
 - `1` — **submit only safe** jobs; unsafe jobs are prepared but not submitted.
