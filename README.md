@@ -177,7 +177,7 @@ The script discovers these automatically in `--source_root` (and `--neutral_root
 - `1` — **submit only safe** jobs; unsafe jobs are prepared but not submitted.
 - `2` — if **any** job is unsafe → **submit none**.
 
-> The script **always** creates/updates the target directories first, then runs safety checks, then decides submissions.
+> The script always creates/updates the target directories first, then runs safety checks, then decides submissions.
 
 ---
 
@@ -201,7 +201,7 @@ The helper determines the total number of k‑points in any **valid** `KPOINTS` 
 - **Monkhorst–Pack**: line 3 contains `Monkhorst‑Pack`, line 4 has `nx ny nz` → uses `nx*ny*nz`.
 - **Gamma**: line 3 contains `Gamma`, line 4 has `nx ny nz` → uses `nx*ny*nz`.
 
-The ``** check** is skipped if `KPAR` is missing or equals `1`. Otherwise, `KPAR` must be `≤ #kpoints`.
+The check is skipped if `KPAR` is missing or if `KPAR` equals 1. Otherwise, `KPAR` must be `≤ #kpoints`.
 
 ---
 
