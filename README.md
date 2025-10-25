@@ -1,0 +1,313 @@
+# VASP Helper
+
+Swiss‑army **Bash helper** to prepare and continue **VASP defect jobs** — neutral and charged — across **relax** and **static** stages.
+
+It discovers defect directories, creates charged states from neutrals, edits **INCAR on the same line**, performs **safety checks** (KPAR/CHGCAR/WAVECAR), handles **spin parity** (optionally removing `ISPIN=2` for even `NELECT`), and can **submit jobs** (`qsub`) after all checks pass. A verbose mode logs everything to `helper.log`.
+
+> This README pairs with `VASP_helper.sh` and the design in *VASP\_helper Pseudocode Blueprint* (see canvas).
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Directory Convention](#directory-convention)
+- [Quick Start](#quick-start)
+- [Command Reference](#command-reference)
+- [Workflows](#workflows)
+  - [Create charged states from neutrals (relax initial)](#create-charged-states-from-neutrals-relax-initial)
+  - [Continue relax (final) or run static](#continue-relax-final-or-run-static)
+  - [Selectors: ](#selectors--q--n-and---charges)[`-Q`](#selectors--q--n-and---charges)[, ](#selectors--q--n-and---charges)[`-N`](#selectors--q--n-and---charges)[, and ](#selectors--q--n-and---charges)[`--charges`](#selectors--q--n-and---charges)
+- [Safety Checks & Submission Policy](#safety-checks--submission-policy)
+- [Spin‑Aware INCAR Handling (](#spinaware-incar-handling---spin)[`--spin`](#spinaware-incar-handling---spin)[)](#spinaware-incar-handling---spin)
+- [KPOINTS Parsing & ](#kpoints-parsing--kpar-check)[`KPAR`](#kpoints-parsing--kpar-check)[ Check](#kpoints-parsing--kpar-check)
+- [What Gets Copied, and Overrides](#what-gets-copied-and-overrides)
+- [Logging & Debugging](#logging--debugging)
+- [Testing Locally (no real submission)](#testing-locally-no-real-submission)
+- [Troubleshooting](#troubleshooting)
+- [Known Limitations / Edge Cases](#known-limitations--edge-cases)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Features
+
+- **Create charged defect states** from a neutral reference (`--mode relax --stage initial -Q`).
+- **Continue** neutral and charged jobs (`--mode relax --stage final` or `--mode static`).
+- **Spin parity control**: with `--spin`, if `ISPIN=2` and computed `NELECT` is **even**, the script **deletes** the `ISPIN` line; if **odd**, it is kept.
+- **Safety system** with three levels:
+  - `--safety 0` → ignore all checks; submit all.
+  - `--safety 1` (default) → submit only jobs that pass checks.
+  - `--safety 2` → if *any* job fails, submit **none**.
+- **KPOINTS parsing** that works with: explicit lists, Monkhorst–Pack, and Gamma‑centered automatic grids.
+- ``** sanity**: flags jobs where `KPAR > #kpoints` (skipped if `KPAR` is missing or `1`).
+- **CHGCAR/WAVECAR safety**:
+  - If `ICHARG=1` → `CHGCAR` must exist and be **non‑empty**; else rewrite same line to `ICHARG=2`.
+  - If `ISTART ∈ {1,2,3}` → `WAVECAR` must exist.
+- **Same‑line INCAR edits**: when modifying `NELECT`, `ICHARG`, or deleting `ISPIN`, position is preserved.
+- **Global overrides**: local `./INCAR`, `./KPOINTS`, `./POTCAR`, `./job.vasp6` override per‑defect files.
+- **Verbose logs** to console (with `-v`) and always to `helper.log`.
+
+---
+
+## Requirements
+
+- Linux/Unix environment with Bash 4+, `awk`, `sed`, `find`.
+- VASP input files: `INCAR`, `KPOINTS`, `POTCAR`, `POSCAR/CONTCAR`, `job.vasp6`.
+- Queue submission via `qsub` in `PATH` (PBS/SGE). For SLURM users, see [Testing Locally](#testing-locally-no-real-submission) to mock `qsub`.
+
+---
+
+## Install
+
+```bash
+# Clone and make the helper executable
+git clone <your-repo-url>
+cd <repo>
+chmod +x VASP_helper.sh
+```
+
+Optional: put it on your PATH.
+
+```bash
+ln -s "$PWD/VASP_helper.sh" ~/bin/VASP_helper.sh
+```
+
+---
+
+## Directory Convention
+
+Your source root contains one level of defect directories named:
+
+```
+<defect>_<site>_<charge>
+# Examples
+Cd_Se_0    Se_Cd_-1    Va_Cd_2    Si_i_0
+```
+
+- **Neutral** ends with `_0`.
+- **Charged** ends with `_±n`.
+
+The script discovers these automatically under `--source_root` (and `--neutral_root` when creating charges).
+
+---
+
+## Quick Start
+
+**Continue existing runs (static), all dirs under **``**:**
+
+```bash
+./VASP_helper.sh --mode static --source_root ./src --safety 1 -v
+```
+
+**Create charged states from neutrals (initial relax):**
+
+```bash
+./VASP_helper.sh --mode relax --stage initial -Q \
+  --source_root ./neutrals \
+  --neutral_root ./neutrals \
+  --spin --safety 1 -v
+```
+
+**Dry‑run (prepare only, no submit):**
+
+```bash
+./VASP_helper.sh --mode static --source_root ./src -q -v
+```
+
+---
+
+## Command Reference
+
+```
+--mode [relax|static]
+--stage [initial|final]     # required if --mode relax
+--source_root PATH          # required
+--neutral_root PATH         # optional; defaults to --source_root when needed
+
+-Q                          # charged-only
+-N                          # neutral-only (invalid with relax initial)
+--charges "list"            # e.g. "--charges '-2 -1 1 2'" (default: -2 -1 1 2)
+
+--spin                      # if INCAR has ISPIN=2, delete it for even NELECT
+--safety [0|1|2]            # 0=ignore checks; 1=safe-only; 2=all-or-none (default: 1)
+-q                          # no-submit (dry-run)
+-v, --verbose               # verbose console + helper.log
+-h, --help
+```
+
+**Mutual exclusivity:** you cannot specify both `-Q` and `-N`.
+
+**Relax initial requires:** `-Q` (charged‑only). `-N` is invalid for this stage.
+
+---
+
+## Workflows
+
+### Create charged states from neutrals (relax initial)
+
+- Discovers `*_0` under `--neutral_root`.
+- For each base name (without `_0`), creates charged dirs per `--charges` (default `-2 -1 1 2`).
+- Computes `NELECT(charged) = NELECT(neutral) − charge` using POSCAR (counts) + POTCAR (`ZVAL`).
+- Applies `--spin` parity logic to `ISPIN`.
+- Handles `ICHARG=1` (requires non‑empty `CHGCAR`; else same‑line change to `ICHARG=2`).
+- Defers **all submissions** until **after** safety checks for **all** jobs.
+
+### Continue relax (final) or run static
+
+- Discovers subdirs in `--source_root` matching `_0` or `_±n`.
+- If charged (`_±n`), derives `NELECT` from source `OUTCAR` or from neutral reference minus charge.
+- Copies `CHGCAR`/`WAVECAR` only when **safe/required** (see Safety Checks), unless `--safety 0`.
+
+### Selectors: `-Q`, `-N`, and `--charges`
+
+- `-Q` selects **charged** subdirs only; `-N` selects **neutral** only.
+- If neither is given, **all** matching subdirs are used.
+- `--charges` controls which charge states are created during **relax initial**.
+
+---
+
+## Safety Checks & Submission Policy
+
+**Checks applied per job directory (after preparation):**
+
+1. ``** vs **``
+   - Skip if `KPAR` is not set or `KPAR=1`.
+   - Otherwise, compute total k‑points from `KPOINTS` and require `KPAR ≤ #kpoints`.
+2. ``** for **``
+   - Must exist and be **non‑empty**; otherwise the job is **unsafe** and `ICHARG` is rewritten **on the same line to **`` during preparation.
+3. ``** for **``
+   - Must exist; otherwise the job is **unsafe**.
+
+**Submission policy (**``**):**
+
+- `0` — **ignore** checks; **submit all**.
+- `1` — **submit only safe** jobs; unsafe jobs are prepared but not submitted.
+- `2` — if **any** job is unsafe → **submit none**.
+
+> The script **always** creates/updates the target directories first, then runs safety checks, then decides submissions.
+
+---
+
+## Spin‑Aware INCAR Handling (`--spin`)
+
+If `--spin` is set and `INCAR` contains `ISPIN=2`:
+
+- Compute/obtain job `NELECT`.
+- If `NELECT` is **even** → **delete** the `ISPIN` line from `INCAR`.
+- If `NELECT` is **odd** → keep `ISPIN=2`.
+
+> This is applied per job so mixed parity across charge states is handled correctly.
+
+---
+
+## KPOINTS Parsing & `KPAR` Check
+
+The helper determines the total number of k‑points in any **valid** `KPOINTS` file:
+
+- **Explicit list**: second line is the integer count; else the tool counts `kx ky kz [w]` lines.
+- **Monkhorst–Pack**: line 3 contains `Monkhorst‑Pack`, line 4 has `nx ny nz` → uses `nx*ny*nz`.
+- **Gamma**: line 3 contains `Gamma`, line 4 has `nx ny nz` → uses `nx*ny*nz`.
+
+The ``** check** is skipped if `KPAR` is missing or equals `1`. Otherwise, `KPAR` must be `≤ #kpoints`.
+
+---
+
+## What Gets Copied, and Overrides
+
+For each prepared/continued job, the script copies into the new directory:
+
+- `POSCAR` (prefers `CONTCAR` if present),
+- `INCAR`, `KPOINTS`, `POTCAR`, `job.vasp6`.
+
+**Global overrides**: if the working directory contains `./INCAR`, `./KPOINTS`, `./POTCAR`, or `./job.vasp6`, those **override** the files from the source defect directory for **all jobs** in the current run.
+
+**Density files** (`CHGCAR`, `WAVECAR`): copied only when required by the INCAR **and** source/target structures match (species/count signature via POSCAR line 6/7). With `--safety 0`, they are copied if they exist.
+
+---
+
+## Logging & Debugging
+
+- Add `-v` (or `--verbose`) to mirror logs to the console.
+- All runs also write a timestamped log to `` in the working directory.
+- The log includes: discovery decisions, computed `NELECT`, INCAR changes, k‑point counts, safety reasons, and submission actions.
+
+---
+
+## Testing Locally (no real submission)
+
+Mock `qsub` so submissions don’t touch your queue:
+
+```bash
+mkdir -p bin
+cat > bin/qsub << 'EOF'
+#!/usr/bin/env bash
+echo "[MOCK qsub] Would submit: $PWD/$*"
+EOF
+chmod +x bin/qsub
+export PATH="$PWD/bin:$PATH"
+
+# Now run the helper in this shell
+./VASP_helper.sh --mode static --source_root ./src -v
+```
+
+You’ll see `[MOCK qsub]` lines instead of real submissions.
+
+---
+
+## Troubleshooting
+
+- **“No matching directories under …”**
+
+  - Ensure subdirectories follow `<defect>_<site>_<charge>` and you pointed `--source_root` at the **parent** of those.
+  - For charge creation, ensure neutrals exist as `*_0` under `--neutral_root`.
+
+- **KPAR failure**
+
+  - Lower `KPAR` or increase #kpoints. Check `helper.log` for the computed total.
+
+- **CHGCAR safety**
+
+  - If `ICHARG=1`, confirm `CHGCAR` exists and is **non‑empty**; otherwise the script rewrites to `ICHARG=2`.
+
+- **WAVECAR safety**
+
+  - If `ISTART ∈ {1,2,3}`, ensure `WAVECAR` is present.
+
+- **Spin parity not applied**
+
+  - `--spin` must be provided, and `INCAR` must contain `ISPIN=2` to trigger parity logic.
+
+- **Global overrides not used**
+
+  - Verify `./INCAR` etc. exist in the **working directory** where you invoke the helper.
+
+---
+
+## Known Limitations / Edge Cases
+
+- `NELECT(neutral)` is derived from `POTCAR` (`ZVAL`) and `POSCAR` (line 7 counts). Mixed or missing `ZVAL` blocks will prevent computation.
+- The POSCAR signature check compares **line 6 (species)** and **line 7 (counts)** only; if your workflow mutates species order or count inconsistently, density file safety checks may skip copies.
+- Only one level of subdirectories is scanned.
+- Submission uses `qsub`. For other schedulers, either provide a wrapper named `qsub` in your `PATH` or adapt the script.
+
+---
+
+## Contributing
+
+PRs welcome! Please:
+
+- Keep the script readable and POSIX‑aware.
+- Favor focused comments that explain **why**.
+- Include a short test recipe or `helper.log` excerpt demonstrating behavior.
+- Update this README when CLI/behavior changes.
+
+---
+
+## License
+
+MIT (or your preferred license). Add your LICENSE file to the repo root.
+
