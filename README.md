@@ -165,12 +165,12 @@ The script discovers these automatically in `--source_root` (and `--neutral_root
 
 **Checks applied per job directory (after preparation):**
 
-1. ``** vs **``
+1. ``KPAR``
    - Skip if `KPAR` is not set or `KPAR=1`.
    - Otherwise, compute total k‑points from `KPOINTS` and require `KPAR ≤ #kpoints`.
-2. ``** for **``
+2. ``CHGCAR``
    - Must exist and be **non‑empty**; otherwise the job is **unsafe** and `ICHARG` is rewritten **on the same line to **`` during preparation.
-3. ``** for **``
+3. ``WAVECAR``
    - Must exist; otherwise the job is **unsafe**.
 
 **Submission policy (**``**):**
