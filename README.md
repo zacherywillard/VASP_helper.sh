@@ -1,10 +1,8 @@
 # VASP Helper
 
-Swiss‑army **Bash helper** to prepare and continue **VASP defect jobs** — neutral and charged — across **relax** and **static** stages.
+Swiss‑army Bash helper to prepare and continue VASP defect jobs. Allows for relaxation and static defect job submission.
 
-It discovers defect directories, creates charged states from neutrals, edits **INCAR on the same line**, performs **safety checks** (KPAR/CHGCAR/WAVECAR), handles **spin parity** (optionally removing `ISPIN=2` for even `NELECT`), and can **submit jobs** (`qsub`) after all checks pass. A verbose mode logs everything to `helper.log`.
-
-> This README pairs with `VASP_helper.sh` and the design in *VASP\_helper Pseudocode Blueprint* (see canvas).
+It auto-detects defect directories within the specified source directory. Allows the generation of charged states from relaxed neutral defects. Performs safety checks (KPAR/CHGCAR/WAVECAR), handles spin parity (optionally removing `ISPIN=2` for even `NELECT`), and can submit jobs (`qsub`) after all checks pass. A verbose mode logs everything to `helper.log`.
 
 ---
 
