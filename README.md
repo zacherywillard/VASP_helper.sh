@@ -1,6 +1,6 @@
 # VASP Helper
 
-Swiss‑army Bash helper to prepare and continue VASP defect jobs. Allows for relaxation and static defect job submission.
+Bash helper to prepare and continue VASP defect jobs. Allows for relaxation and static defect job submission.
 
 It auto-detects defect directories within the specified source directory. Allows the generation of charged states from relaxed neutral defects. Performs safety checks (KPAR/CHGCAR/WAVECAR), handles spin parity (optionally removing `ISPIN=2` for even `NELECT`), and can submit jobs (`qsub`) after all checks pass. A verbose mode logs everything to `helper.log`.
 
