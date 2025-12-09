@@ -41,13 +41,11 @@ It auto-detects defect directories within the specified source directory. Allows
   - `--safety 0` → ignore all checks; submit all.
   - `--safety 1` (default) → submit only jobs that pass checks.
   - `--safety 2` → if *any* job fails, submit **none**.
-- **KPOINTS parsing** that works with: explicit lists, Monkhorst–Pack, and Gamma‑centered automatic grids.
-- ``** sanity**: flags jobs where `KPAR > #kpoints` (skipped if `KPAR` is missing or `1`).
 - **CHGCAR/WAVECAR safety**:
   - If `ICHARG=1` → `CHGCAR` must exist and be **non‑empty**; else rewrite same line to `ICHARG=2`.
   - If `ISTART ∈ {1,2,3}` → `WAVECAR` must exist.
 - **Global overrides**: local `./INCAR`, `./KPOINTS`, `./POTCAR`, `./job.vasp6` override per‑defect files.
-- **Verbose logs** to console (with `-v`) and always to `helper.log`.
+- **Verbose logs** to console and `helper.log`.
 
 ---
 
@@ -161,16 +159,6 @@ The script discovers these automatically in `--source_root` (and `--neutral_root
 
 ---
 
-## Safety Checks & Submission Policy
-
-**Checks applied per job directory (after preparation):**
-
-1. ``KPAR``
-   - Skip if `KPAR` is not set or `KPAR=1`.
-   - Otherwise, compute total k‑points from `KPOINTS` and require `KPAR ≤ #kpoints`.
-2. ``CHGCAR``
-   - Must exist and be **non‑empty**; otherwise the job is **unsafe** and `ICHARG` is rewritten during preparation.
-
 **Submission policy:**
 
 - `0` — **ignore** checks; **submit all**.
@@ -193,17 +181,6 @@ If `--spin` is set and `INCAR` contains `ISPIN=2`:
 
 ---
 
-## KPOINTS Parsing & `KPAR` Check
-
-The helper determines the total number of k‑points in any **valid** `KPOINTS` file:
-
-- **Explicit list**: second line is the integer count; else the tool counts `kx ky kz [w]` lines.
-- **Monkhorst–Pack**: line 3 contains `Monkhorst‑Pack`, line 4 has `nx ny nz` → uses `nx*ny*nz`.
-- **Gamma**: line 3 contains `Gamma`, line 4 has `nx ny nz` → uses `nx*ny*nz`.
-
-The check is skipped if `KPAR` is missing or if `KPAR` equals 1. Otherwise, `KPAR` must be `≤ #kpoints`.
-
----
 
 ## What Gets Copied, and Overrides
 
@@ -220,9 +197,8 @@ For each prepared/continued job, the script copies into the new directory:
 
 ## Logging & Debugging
 
-- Add `-v` (or `--verbose`) to mirror logs to the console.
-- All runs also write a timestamped log to `` in the working directory.
-- The log includes: discovery decisions, computed `NELECT`, INCAR changes, k‑point counts, safety reasons, and submission actions.
+- All runs also write a timestamped log to `helper.log` in the working directory.
+- The log includes: discovery decisions, computed `NELECT`, INCAR changes, safety reasons, and submission actions.
 
 ---
 
@@ -232,10 +208,6 @@ For each prepared/continued job, the script copies into the new directory:
 
   - Ensure subdirectories follow `<defect>_<site>_<charge>` and you pointed `--source_root` at the **parent** of those.
   - For charge creation, ensure neutrals exist as `*_0` under `--neutral_root`.
-
-- **KPAR failure**
-
-  - Lower `KPAR` or increase #kpoints. Check `helper.log` for the computed total.
 
 - **CHGCAR safety**
 
@@ -248,22 +220,6 @@ For each prepared/continued job, the script copies into the new directory:
 - **Spin parity not applied**
 
   - `--spin` must be provided, and `INCAR` must contain `ISPIN=2` to trigger parity logic.
-
----
-
-## Known Limitations / Edge Cases
-
-- The POSCAR signature check compares **line 6 (species)** and **line 7 (counts)** only; if your workflow mutates species order or count inconsistently, density file safety checks may skip copies.
-- Only one level of subdirectories is scanned.
-- Submission uses `qsub`. For other schedulers, either provide a wrapper named `qsub` in your `PATH` or adapt the script.
-
----
-
-## Contributing
-
-PRs welcome! Please:
-- Include a short test recipe or `helper.log` excerpt demonstrating behavior.
-- Update this README when CLI/behavior changes.
 
 ---
 
