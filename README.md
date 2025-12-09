@@ -216,9 +216,4 @@ For each prepared/continued job, the script copies into the new directory:
 
   - `--spin` must be provided, and `INCAR` must contain `ISPIN=2` to trigger parity logic.
 
----
-
-## License
-
-MIT (or your preferred license). Add your LICENSE file to the repo root.
 
