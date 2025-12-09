@@ -219,12 +219,13 @@ incar_delete_line_key() {
 }
 
 incar_set_or_append() {
-  # If KEY exists: replace same line; else append "KEY = VALUE"
+incar_set_or_append() {
+  # If KEY exists: replace same line; else append "KEY = VALUE" with a preceding newline.
   local key="$1" value="$2" file="$3"
   if incar_has_key "$key" "$file"; then
     incar_replace_same_line "$key" "$value" "$file"
   else
-    printf "%s = %s\n" "$key" "$value" >> "$file"
+    printf "\n%s = %s\n" "$key" "$value" >> "$file"
   fi
 }
 
