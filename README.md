@@ -56,8 +56,8 @@ It auto-detects defect directories within the specified source directory. Allows
 
 ```bash
 # Clone and make the helper executable
-git clone https://github.com/zacherywillard/VASP_helper.sh
-cd VASP_helper.sh
+git clone https://github.com/zacherywillard/VASP_helper
+cd VASP_helper
 chmod +x VASP_helper.sh
 ```
 ---
