@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # VASP_helper.sh
+# ----------------
+# Automates creation and continuation of VASP defect jobs by:
+#   • Creating charged defects from neutral structures (initial relax)
+#   • Continuing existing calculations (final relax / static)
+#   • Automatically setting NELECT
+#   • Optional spin handling based on NELECT parity
+#   • Optional safety checks (CHGCAR/WAVECAR consistency)
 #
-# Automate VASP job continuation and creation of charged defect states with:
-# - safety levels (--safety 0/1/2),
-# - spin-aware INCAR handling (--spin),
-# - charged/neutral filtering (-Q / -N),
-# - universal KPOINTS counting + KPAR sanity checks,
-# - verbose logging (-v/--verbose) to console and helper.log.
-#
-# Functions are grouped by responsibility. Comments focus on the "why".
+# The goal of this script is to eliminate repetitive setup steps
+# and enforce consistent, safe workflows for large defect datasets.
 
 set -euo pipefail
 
@@ -26,7 +27,7 @@ CHARGES=()             # default later: -2 -1 1 2
 SPIN_MODE=false        # --spin
 SAFETY=1               # 0 ignore, 1 submit-safe-only, 2 all-or-nothing
 SUBMIT=true            # -q to disable
-VERBOSE=false          # -v/--verbose
+VERBOSE=true          # -v/--verbose
 LOG_FILE="helper.log"
 
 # track work
@@ -320,25 +321,7 @@ safety_check_job() {
 
   local unsafe_reason=()
 
-  # (1) KPAR sanity if present and >1
-  if incar_has_key "KPAR" "$incar"; then
-    local kpar
-    kpar="$(incar_get_val "KPAR" "$incar" || true)"
-    kpar="$(echo "$kpar" | awk '{print int($1)+0}')"
-    if (( kpar > 1 )); then
-      local nk; nk="$(count_kpoints "$kpoints")"
-      if (( kpar > nk )); then
-        unsafe_reason+=("KPAR=$kpar > kpoints=$nk")
-        log "Unsafe ($dir): KPAR=$kpar > kpoints=$nk"
-      fi
-    else
-      log "Info ($dir): KPAR check skipped (KPAR<=1)"
-    fi
-  else
-    log "Info ($dir): KPAR not set; check skipped"
-  fi
-
-  # (2) CHGCAR safety if ICHARG=1
+  # (1) CHGCAR safety if ICHARG=1
   if incar_has_key "ICHARG" "$incar"; then
     local ich; ich="$(incar_get_val "ICHARG" "$incar" || true)"
     ich="$(echo "$ich" | awk '{print int($1)+0}')"
@@ -350,7 +333,7 @@ safety_check_job() {
     fi
   fi
 
-  # (3) WAVECAR safety if ISTART in {1,2,3}
+  # (2) WAVECAR safety if ISTART in {1,2,3}
   if incar_has_key "ISTART" "$incar"; then
     local ist; ist="$(incar_get_val "ISTART" "$incar" || true)"
     ist="$(echo "$ist" | awk '{print int($1)+0}')"
