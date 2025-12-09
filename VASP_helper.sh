@@ -219,7 +219,6 @@ incar_delete_line_key() {
 }
 
 incar_set_or_append() {
-incar_set_or_append() {
   # If KEY exists: replace same line; else append "KEY = VALUE" with a preceding newline.
   local key="$1" value="$2" file="$3"
   if incar_has_key "$key" "$file"; then
