@@ -48,7 +48,7 @@ It auto-detects defect directories within the specified source directory. Allows
 
 - Linux/Unix environment with Bash 4+, `awk`, `sed`, `find`.
 - VASP input files: `INCAR`, `KPOINTS`, `POTCAR`, `POSCAR/CONTCAR`, `job.vasp6`.
-- Queue submission via `qsub` in `PATH` (PBS/SGE).
+- Queue submission via `qsub` in `PATH`.
 
 ---
 
