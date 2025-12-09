@@ -84,22 +84,19 @@ The script discovers these automatically in `--source_root` (and `--neutral_root
 **Continue existing runs (static), all dirs under **``**:**
 
 ```bash
-./VASP_helper.sh --mode static --source_root ./src --safety 1 -v
+./VASP_helper.sh --mode static --source_root ./src
 ```
 
 **Create charged states from neutrals (initial relax):**
 
 ```bash
-./VASP_helper.sh --mode relax --stage initial -Q \
-  --source_root ./neutrals \
-  --neutral_root ./neutrals \
-  --spin --safety 1 -v
+./VASP_helper.sh --mode relax --stage initial -Q --source_root ./neutrals --neutral_root ./neutrals --spin 
 ```
 
 **Dry‑run (prepare only, no submit):**
 
 ```bash
-./VASP_helper.sh --mode static --source_root ./src -q -v
+./VASP_helper.sh --mode static --source_root ./src -q
 ```
 
 ---
