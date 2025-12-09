@@ -20,14 +20,9 @@ It auto-detects defect directories within the specified source directory. Allows
   - [Selectors: ](#selectors--q--n-and---charges)[`-Q`](#selectors--q--n-and---charges)[, ](#selectors--q--n-and---charges)[`-N`](#selectors--q--n-and---charges)[, and ](#selectors--q--n-and---charges)[`--charges`](#selectors--q--n-and---charges)
 - [Safety Checks & Submission Policy](#safety-checks--submission-policy)
 - [Spin‑Aware INCAR Handling (](#spinaware-incar-handling---spin)[`--spin`](#spinaware-incar-handling---spin)[)](#spinaware-incar-handling---spin)
-- [KPOINTS Parsing & ](#kpoints-parsing--kpar-check)[`KPAR`](#kpoints-parsing--kpar-check)[ Check](#kpoints-parsing--kpar-check)
 - [What Gets Copied, and Overrides](#what-gets-copied-and-overrides)
 - [Logging & Debugging](#logging--debugging)
 - [Testing Locally (no real submission)](#testing-locally-no-real-submission)
-- [Troubleshooting](#troubleshooting)
-- [Known Limitations / Edge Cases](#known-limitations--edge-cases)
-- [Contributing](#contributing)
-- [License](#license)
 
 ---
 
